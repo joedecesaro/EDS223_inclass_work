@@ -1,0 +1,96 @@
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Prerequisites
+
+```{r}
+library(sf)
+library(terra)
+library(dplyr)
+library(spData)
+library(tmap)
+
+elev  = rast(system.file("raster/elev.tif",  package = "spData"))
+grain = rast(system.file("raster/grain.tif", package = "spData"))
+```
+
+## Spatial operations on raster data
+
+### Spatial subsetting (masking)
+
+```{r}
+rmask = elev # just to get a rmask the same shape as elev
+values(rmask) = sample(c(NA, TRUE), 36, replace = TRUE)
+
+plot(elev)
+plot(rmask)
+plot(mask(elev, rmask)) # the mask can act as a sic that will filter out specific data that we want from other rasters. This will be super useful when making a map.
+```
+
+### Map algebra
+
+### Local operations
+Map algebra = raster algebra when discussing GIS. Doing algebra using rasters can help us single out specific ideas
+```{r}
+plot(elev)
+plot(elev + elev)
+plot(elev^2)
+plot(log(elev))
+plot(elev > 5)
+# local operation can be a logical test, arithmetic, and many other functions. Local operations are fast.
+```
+
+```{r}
+plot(elev)
+
+(rcl_matrix = matrix(c(0, 12, 1, 12, 24, 2, 24, 36, 3), ncol = 3, byrow = TRUE))
+# from 0-12 set to 1, from 12-24 set to 2, from 24-36 set to 3
+
+plot(classify(elev, rcl = rcl_matrix))
+```
+
+```{r}
+multi_raster_file = system.file("raster/landsat.tif", package = "spDataLarge")
+multi_rast = rast(multi_raster_file)
+
+plotRGB(multi_rast, r = 3, g = 2, b = 1, scale = 32767, stretch = "lin")
+```
+
+```{r}
+ndvi_fun = function(nir, red){
+  (nir - red) / (nir + red)
+}
+
+(ndvi_rast = lapp(multi_rast[[c(4, 3)]], fun = ndvi_fun))
+
+plot(ndvi_rast)
+```
+
+### Focal operations
+Focus operation is an operation that for every value of x and ya that you are calculating you look at the input value and the neighborhood of values around that input value. The neighborhood is presumed to be uniform in size unless told otherwise.
+```{r}
+(neighborhood = matrix(1, nrow = 7, ncol = 7)) # generally neighborhoods are considered squares
+
+rast_red        = multi_rast[[3]] # red band of the landsat raster above
+rast_red_lopass = focal(rast_red, w = neighborhood, fun = mean) # apply the focal operation to specify the neighborhood (mask floating over the image), and fun applys the function mean.
+rast_red_hipass = rast_red * 2 - rast_red_lopass 
+
+grayscale = gray.colors(256)
+
+plot(rast_red,        col = grayscale) # this is what the plain red image looks like
+plot(rast_red_lopass, col = grayscale) # this is the result of every output value calculating the 7x7 average for the corresponding neighborhood. It produces the second blurry map because you are taking the average of the points around it. 
+plot(rast_red_hipass, col = grayscale) # photography trick which takes the blurred version of the image and subtracts it from the original image to 'sharpen' it.
+```
+
+### Zonal operations
+
+```{r}
+plot(elev)
+plot(grain) # same size raster that has categorical data labeled clay, silt, and sand. 
+
+zonal(elev, grain, fun = "mean")
+# mean elevation of all the cells with clay is 14.8.
+# for all of these operations to work they need to have the same resolution and 'line-up'
+```
+

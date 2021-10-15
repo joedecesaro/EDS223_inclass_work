@@ -1,0 +1,39 @@
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Prerequisites
+
+```{r}
+library(terra) # package to handle raster data, other one to us is stars
+library(spDataLarge)
+library(tmap)
+```
+
+## Raster classes
+
+```{r}
+single_raster_file = system.file("raster/srtm.tif", package = "spDataLarge")
+(single_rast = rast(single_raster_file)) # gives us a bunch of information about the raster, rasters are usually data that has been acquired by a sensor or a model.
+```
+
+```{r}
+plot(single_rast, col = terrain.colors(255))
+
+tm_shape(single_rast) +
+  tm_raster(style = "cont", palette = terrain.colors(255))
+```
+
+```{r}
+multi_raster_file = system.file("raster/landsat.tif", package = "spDataLarge")
+(multi_rast = rast(multi_raster_file))
+```
+
+```{r}
+plot(multi_rast) # plot is not very helpful here as it takes each layer of the raster file and sets them as seperate representations
+```
+```{r}
+plotRGB(multi_rast, b = 1, g = 2, r = 3, scale = 32767, stretch = "lin") # This is the true color image, scale gives us the min/max range, what happened to the 4th layer?
+plotRGB(multi_rast, b = 2, g = 3, r = 4, scale = 32767, stretch = "lin") # This shifted everything by one color
+```
+

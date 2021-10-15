@@ -1,0 +1,74 @@
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Prerequisites
+
+```{r}
+library(sf)
+library(dplyr)
+library(spData)
+library(spDataLarge)
+```
+
+## Geometric operations on vector data
+
+### Buffers
+
+```{r}
+seine_buff_5km  = st_buffer(seine, dist =  5000)
+seine_buff_50km = st_buffer(seine, dist = 50000)
+# Seine is a multi line string that is part of the spData package mapping a river.
+```
+
+```{r}
+plot(seine,           key.pos = 1, main = NULL)
+plot(seine_buff_5km,  key.pos = 1, main = NULL)
+plot(seine_buff_50km, key.pos = 1, main = NULL)
+
+# This produces three example maps with the seine strings to show how they appear with a buffer
+```
+
+### Clipping
+
+```{r}
+b <- st_sfc(st_point(c(0, 1)), 
+            st_point(c(1, 1))) %>%
+  st_buffer(dist = 1)
+
+plot(b)
+text(x = c(-0.5, 1.5), y = 1, labels = c("x", "y"))
+```
+
+```{r}
+x <- b[1] # The first polygon of the polygons in b
+y <- b[2] # The second polygon of the polygons in b
+
+clip_demo <- function(op) {
+  plot(b)
+  plot(op(x, y), col = "lightgrey", add = TRUE)
+}
+```
+
+```{r}
+clip_demo(st_intersection)   # AND, keeps only what is shared between the two polygons
+clip_demo(st_union)          # OR, keeps everything but makes it a single polygon
+clip_demo(st_sym_difference) # XOR, (exclusive or) keeps everything except for what is overlapped
+clip_demo(st_difference)     # Takes x and subtracts it from y (removes any overla)
+```
+
+```{r}
+box <-
+  st_union(x, y) %>% # do the union
+  st_bbox() %>% # find the bounding box for the union
+  st_as_sfc() # make the bounding box as a simple feature
+
+set.seed(2021) # set up a random number generator
+p <- st_sample(box, size = 20) # sample 10 random points inside this box
+
+plot(box) # plot just the box
+plot(x, add = TRUE) # plot the x circle
+plot(y, add = TRUE) # plot the y circle
+plot(p[box], add = TRUE) # plot all the points that fall within the box, if we change the [box] to the clip functions above it will change the points that appear
+text(x = c(-0.5, 1.5), y = 1, labels = c("x", "y")) # label the x and y circles
+```
